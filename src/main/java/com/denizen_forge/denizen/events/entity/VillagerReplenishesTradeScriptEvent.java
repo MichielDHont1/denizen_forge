@@ -1,0 +1,96 @@
+package com.denizenscript.denizen.events.entity;
+
+import com.denizenscript.denizen.events.ForgeScriptEvent;
+import com.denizenscript.denizen.objects.EntityTag;
+import com.denizenscript.denizen.objects.TradeTag;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.core.ElementTag;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.VillagerReplenishTradeEvent;
+
+public class VillagerReplenishesTradeScriptEvent extends ForgeScriptEvent {
+
+    // <--[event]
+    // @Events
+    // villager replenishes trade
+    //
+    // @Regex ^on villager replenishes trade$
+    //
+    // @Group Entity
+    //
+    // @Location true
+    //
+    // @Cancellable true
+    //
+    // @Triggers when a villager replenishes a trade.
+    //
+    // @Context
+    // <context.entity> returns the EntityTag of the villager.
+    // <context.trade> returns the TradeTag for the trade being replenished.
+    // <context.bonus> returns the number of bonus uses added.
+    //
+    // @Determine
+    // TradeTag to change the trade being replenished.
+    // ElementTag(Number) to change the number of bonus uses added.
+    // -->
+
+    public VillagerReplenishesTradeScriptEvent() {
+        instance = this;
+    }
+
+    public static VillagerReplenishesTradeScriptEvent instance;
+    public EntityTag entity;
+    public VillagerReplenishTradeEvent event;
+
+    @Override
+    public boolean couldMatch(ScriptPath path) {
+        return path.eventLower.startsWith("villager replenishes trade");
+    }
+
+    @Override
+    public boolean matches(ScriptPath path) {
+        if (!runInCheck(path, entity.getLocation())) {
+            return false;
+        }
+        return super.matches(path);
+    }
+
+    @Override
+    public String getName() {
+        return "VillagerReplenishesTrade";
+    }
+
+
+    @Override
+    public boolean applyDetermination(ScriptPath path, ObjectTag determinationObj) {
+        if (TradeTag.matches(determinationObj.toString())) {
+            event.setRecipe(determinationObj.asType(TradeTag.class, getTagContext(path)).getRecipe());
+            return true;
+        }
+        else if (determinationObj instanceof ElementTag && ((ElementTag) determinationObj).isInt()) {
+            event.setBonus(((ElementTag) determinationObj).asInt());
+            return true;
+        }
+        return super.applyDetermination(path, determinationObj);
+    }
+
+    @Override
+    public ObjectTag getContext(String name) {
+        switch (name) {
+            case "entity":
+                return entity;
+            case "trade":
+                return new TradeTag(event.getRecipe());
+            case "bonus":
+                return new ElementTag(event.getBonus());
+        }
+        return super.getContext(name);
+    }
+
+    @SubscribeEvent
+    public void onVillagerReplenishesTrade(VillagerReplenishTradeEvent event) {
+        this.event = event;
+        fire(event);
+    }
+}

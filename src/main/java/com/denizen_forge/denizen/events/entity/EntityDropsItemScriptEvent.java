@@ -1,0 +1,129 @@
+package com.denizenscript.denizen.events.entity;
+
+import com.denizenscript.denizen.objects.EntityTag;
+import com.denizenscript.denizen.objects.ItemTag;
+import com.denizenscript.denizen.utilities.implementation.BukkitScriptEntryData;
+import com.denizenscript.denizen.events.ForgeScriptEvent;
+import com.denizenscript.denizen.objects.LocationTag;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.scripts.ScriptEntryData;
+import org.bukkit.entity.Item;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDropItemEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+
+public class EntityDropsItemScriptEvent extends ForgeScriptEvent {
+
+    // <--[event]
+    // @Events
+    // entity drops item
+    // <entity> drops <item>
+    //
+    // @Regex ^on [^\s]+ drops [^\s]+$
+    //
+    // @Group Entity
+    //
+    // @Location true
+    //
+    // @Cancellable true
+    //
+    // @Triggers when an entity drops an item.
+    //
+    // @Context
+    // <context.item> returns the ItemTag.
+    // <context.entity> returns a EntityTag of the item.
+    // <context.dropped_by> returns the EntityTag that dropped the item.
+    // <context.location> returns a LocationTag of the item's location.
+    //
+    // @Player When the entity dropping an item is a player.
+    //
+    // -->
+
+    public EntityDropsItemScriptEvent() {
+        instance = this;
+    }
+
+    public static EntityDropsItemScriptEvent instance;
+    public ItemTag item;
+    public LocationTag location;
+    public EntityTag itemEntity;
+    public EntityTag dropper;
+
+    @Override
+    public boolean couldMatch(ScriptPath path) {
+        if (!path.eventArgLowerAt(1).equals("drops")) {
+            return false;
+        }
+        if (!couldMatchEntity(path.eventArgLowerAt(0))) {
+            return false;
+        }
+        if (path.eventArgLowerAt(2).equals("from")) {
+            return false;
+        }
+        if (!couldMatchItem(path.eventArgLowerAt(2))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean matches(ScriptPath path) {
+        if (!tryEntity(dropper, path.eventArgLowerAt(0))) {
+            return false;
+        }
+        String iCheck = path.eventArgLowerAt(2);
+        if (!iCheck.equals("item") && !tryItem(item, iCheck)) {
+            return false;
+        }
+        if (!runInCheck(path, location)) {
+            return false;
+        }
+        return super.matches(path);
+    }
+
+    @Override
+    public String getName() {
+        return "EntityDropsItem";
+    }
+
+    @Override
+    public ScriptEntryData getScriptEntryData() {
+        return new BukkitScriptEntryData(dropper);
+    }
+
+    @Override
+    public ObjectTag getContext(String name) {
+        switch (name) {
+            case "item":
+                return item;
+            case "entity":
+                return itemEntity;
+            case "dropped_by":
+                return dropper.getDenizenObject();
+            case "location":
+                return location;
+        }
+        return super.getContext(name);
+    }
+
+    @SubscribeEvent
+    public void onPlayerDropsItem(PlayerDropItemEvent event) {
+        dropper = new EntityTag(event.getPlayer());
+        location = dropper.getLocation();
+        itemEntity = new EntityTag(event.getItemDrop());
+        EntityTag.rememberEntity(itemEntity.getBukkitEntity());
+        item = new ItemTag(((Item) itemEntity.getBukkitEntity()).getItemStack());
+        fire(event);
+    }
+
+    @SubscribeEvent
+    public void onEntityDropsItem(EntityDropItemEvent event) {
+        dropper = new EntityTag(event.getEntity());
+        location = dropper.getLocation();
+        itemEntity = new EntityTag(event.getItemDrop());
+        EntityTag.rememberEntity(itemEntity.getBukkitEntity());
+        item = new ItemTag(((Item) itemEntity.getBukkitEntity()).getItemStack());
+        fire(event);
+    }
+}

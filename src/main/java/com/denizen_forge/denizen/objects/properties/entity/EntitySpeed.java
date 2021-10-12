@@ -1,0 +1,124 @@
+package com.denizenscript.denizen.objects.properties.entity;
+
+import com.denizenscript.denizen.nms.NMSHandler;
+import com.denizenscript.denizen.objects.EntityTag;
+import com.denizenscript.denizencore.objects.core.ElementTag;
+import com.denizenscript.denizencore.objects.Mechanism;
+import com.denizenscript.denizencore.objects.ObjectTag;
+import com.denizenscript.denizencore.objects.properties.Property;
+import com.denizenscript.denizencore.tags.Attribute;
+import org.bukkit.entity.Boat;
+import org.bukkit.entity.Minecart;
+
+public class EntitySpeed implements Property {
+
+    public static boolean describes(ObjectTag entity) {
+        if (!(entity instanceof EntityTag)) {
+            return false;
+        }
+        EntityTag ent = (EntityTag) entity;
+        if (ent.isLivingEntity()) {
+            return true;
+        }
+        return ent.getBukkitEntity() instanceof Boat || ent.getBukkitEntity() instanceof Minecart;
+    }
+
+    public static EntitySpeed getFrom(ObjectTag entity) {
+        if (!describes(entity)) {
+            return null;
+        }
+        else {
+            return new EntitySpeed((EntityTag) entity);
+        }
+    }
+
+    public static final String[] handledTags = new String[] {
+            "speed"
+    };
+
+    public static final String[] handledMechs = new String[] {
+            "speed"
+    };
+
+    private EntitySpeed(EntityTag ent) {
+        entity = ent;
+    }
+
+    EntityTag entity;
+
+    @Override
+    public String getPropertyString() {
+        return getSpeed().asString();
+    }
+
+    @Override
+    public String getPropertyId() {
+        return "speed";
+    }
+
+    public ElementTag getSpeed() {
+        if (entity.isLivingEntity()) {
+            return new ElementTag(NMSHandler.getEntityHelper().getSpeed(entity.getBukkitEntity()));
+        }
+        else {
+            if (entity.getBukkitEntity() instanceof Boat) {
+                return new ElementTag(((Boat) entity.getBukkitEntity()).getMaxSpeed());
+            }
+            else if (entity.getBukkitEntity() instanceof Minecart) {
+                return new ElementTag(((Minecart) entity.getBukkitEntity()).getMaxSpeed());
+            }
+        }
+        return new ElementTag(0.0);
+    }
+
+    @Override
+    public ObjectTag getObjectAttribute(Attribute attribute) {
+
+        if (attribute == null) {
+            return null;
+        }
+
+        // <--[tag]
+        // @attribute <EntityTag.speed>
+        // @returns ElementTag(Decimal)
+        // @mechanism EntityTag.speed
+        // @group attributes
+        // @description
+        // Returns how fast the entity can move.
+        // -->
+        if (attribute.startsWith("speed")) {
+            return getSpeed().getObjectAttribute(attribute.fulfill(1));
+        }
+
+        return null;
+    }
+
+    @Override
+    public void adjust(Mechanism mechanism) {
+
+        // <--[mechanism]
+        // @object EntityTag
+        // @name speed
+        // @input ElementTag(Decimal)
+        // @description
+        // Sets how fast the entity can move.
+        // @tags
+        // <EntityTag.speed>
+        // -->
+        if (mechanism.matches("speed") && mechanism.requireDouble()) {
+            double value = mechanism.getValue().asDouble();
+            if (entity.isLivingEntity()) {
+                NMSHandler.getEntityHelper().setSpeed(entity.getBukkitEntity(), value);
+            }
+            else {
+                if (entity.getBukkitEntity() instanceof Boat) {
+                    ((Boat) entity.getBukkitEntity()).setMaxSpeed(value);
+                }
+                else if (entity.getBukkitEntity() instanceof Minecart) {
+                    ((Minecart) entity.getBukkitEntity()).setMaxSpeed(value);
+                }
+            }
+        }
+
+    }
+}
